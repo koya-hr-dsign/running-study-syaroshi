@@ -1,5 +1,5 @@
 /* sw.js — オフラインで使えるようにアプリ本体をキャッシュする */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const CACHE = 'sharoushi-' + VERSION;
 const SHELL = [
   './',
@@ -36,7 +36,19 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
 
-  // Gemini API など外部への通信はキャッシュを介さない
+  // Web フォントはオフラインでも効くようキャッシュ優先で持つ
+  if (url.host === 'fonts.googleapis.com' || url.host === 'fonts.gstatic.com') {
+    e.respondWith(
+      caches.match(req).then((hit) => hit || fetch(req).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(req, copy));
+        return res;
+      }))
+    );
+    return;
+  }
+
+  // Gemini API など、それ以外の外部への通信はキャッシュを介さない
   if (url.origin !== self.location.origin) return;
 
   // アプリ本体は「まずネットワーク、駄目ならキャッシュ」。

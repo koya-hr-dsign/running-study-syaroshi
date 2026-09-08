@@ -26,6 +26,17 @@
   }
   function stopSpeaking() { flowToken++; Voice.cancel(); }
 
+  /* テーマ（既定はライト。ダークは端末の省電力用に用意する） */
+  const THEME_COLOR = { light: '#ffffff', dark: '#17171b' };
+  function applyTheme(t) {
+    document.documentElement.setAttribute('data-theme', t);
+    const dark = t === 'dark' ||
+      (t === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+    $('themeColor').setAttribute('content', dark ? THEME_COLOR.dark : THEME_COLOR.light);
+  }
+  matchMedia('(prefers-color-scheme: dark)')
+    .addEventListener('change', () => { if (S().theme === 'auto') applyTheme('auto'); });
+
   function toast(msg, ms = 2200) {
     const el = $('toast');
     el.textContent = msg;
@@ -69,6 +80,12 @@
   /* ============================================================
    * ホーム
    * ============================================================ */
+  const SUBJECT_ORDER = [
+    '労働基準法', '労働安全衛生法', '労働者災害補償保険法', '雇用保険法', '労働保険徴収法',
+    '労務管理その他の労働に関する一般常識', '社会保険に関する一般常識',
+    '健康保険法', '厚生年金保険法', '国民年金法'
+  ];
+
   function isDue(q) { const s = Store.stateOf(q.id); return s.seen > 0 && s.due <= Date.now(); }
   function isNew(q) { return Store.stateOf(q.id).seen === 0; }
   function isWrong(q) { const s = Store.stateOf(q.id); return s.wrong > 0; }
@@ -88,9 +105,15 @@
       bySubject.get(q.subject).push(q);
     });
 
+    // IndexedDB は id 順で返すため、本試験の科目順に並べ直す
+    const ordered = [...bySubject.entries()].sort((a, b) => {
+      const ia = SUBJECT_ORDER.indexOf(a[0]), ib = SUBJECT_ORDER.indexOf(b[0]);
+      return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib) || a[0].localeCompare(b[0], 'ja');
+    });
+
     const wrap = $('subjectList');
     wrap.textContent = '';
-    [...bySubject.entries()].forEach(([name, list]) => {
+    ordered.forEach(([name, list]) => {
       const done = list.filter((q) => Store.stateOf(q.id).box >= 2).length;
       const btn = document.createElement('button');
       btn.className = 'subj';
@@ -353,6 +376,7 @@
     const s = S();
     const set = (id, prop, val) => { $(id)[prop] = val; };
 
+    set('setTheme', 'value', s.theme || 'light');
     set('setRate', 'value', s.rate);
     set('setPitch', 'value', s.pitch);
     set('setNextDelay', 'value', s.nextDelay);
@@ -376,6 +400,7 @@
     if (window.speechSynthesis) speechSynthesis.addEventListener('voiceschanged', fillVoices);
 
     const on = (id, ev, fn) => $(id).addEventListener(ev, fn);
+    on('setTheme', 'change', (e) => { Store.saveSettings({ theme: e.target.value }); applyTheme(e.target.value); });
     on('setRate', 'input', (e) => { Store.saveSettings({ rate: +e.target.value }); $('rateVal').textContent = e.target.value + '倍'; });
     on('setPitch', 'input', (e) => Store.saveSettings({ pitch: +e.target.value }));
     on('setNextDelay', 'input', (e) => { Store.saveSettings({ nextDelay: +e.target.value }); $('nextDelayVal').textContent = e.target.value + '秒'; });
@@ -488,6 +513,7 @@
    * ============================================================ */
   async function main() {
     Voice.settings = S();
+    applyTheme(S().theme || 'light');
     bindUI();
     questions = await Store.loadQuestions();
     bindSettings();

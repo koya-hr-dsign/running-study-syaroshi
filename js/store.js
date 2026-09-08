@@ -6,6 +6,7 @@
   var K_SET = 'sq.settings', K_PROG = 'sq.progress';
 
   var DEFAULT_SETTINGS = {
+    theme: 'light',
     rate: 1.2, pitch: 1.0, voiceURI: '',
     autoRead: true, readChoices: true, autoExplain: true, autoNext: false,
     bargeIn: true, micAuto: true, nextDelay: 1.5,
