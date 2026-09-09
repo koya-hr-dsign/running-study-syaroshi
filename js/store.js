@@ -5,7 +5,7 @@
   var DB_NAME = 'sharoushi', DB_VER = 1, OS = 'questions';
   var K_SET = 'sq.settings', K_PROG = 'sq.progress', K_SEED = 'sq.seedVersion';
   // 初期データを差し替えたら上げる。既存の端末でも次回起動時に入れ替わる
-  var SEED_VERSION = 2;
+  var SEED_VERSION = 3;
 
   var DEFAULT_SETTINGS = {
     theme: 'light',
