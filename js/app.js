@@ -444,10 +444,41 @@
     });
 
     updateDataInfo();
-    $('envInfo').textContent =
-      `読み上げ: ${Voice.ttsSupported ? '利用可' : '非対応'} / ` +
-      `音声認識: ${Voice.sttSupported ? '利用可' : '非対応（iOS Safari など）'} / ` +
-      `日本語音声: ${Voice.voiceList().length} 件`;
+    updateEnvInfo();
+  }
+
+  async function updateEnvInfo() {
+    const lines = [
+      `読み上げ: ${Voice.ttsSupported ? '利用可' : '非対応'}`,
+      `音声認識: ${Voice.sttSupported ? '利用可' : '非対応（iOS Safari など）'}`,
+      `日本語音声: ${Voice.voiceList().length} 件`
+    ];
+    try {
+      if (navigator.storage) {
+        const persisted = await navigator.storage.persisted();
+        lines.push(`保存領域: ${persisted ? '永続化済み（自動削除されません）'
+          : 'ベストエフォート（端末の空き容量が逼迫すると消えることがあります）'}`);
+        if (navigator.storage.estimate) {
+          const { usage, quota } = await navigator.storage.estimate();
+          if (quota) {
+            lines.push(`使用量: ${(usage / 1024).toFixed(0)} KB / 上限 ${(quota / 1048576).toFixed(0)} MB`);
+          }
+        }
+      }
+    } catch (e) { /* 取得できない環境では表示しないだけ */ }
+    $('envInfo').textContent = lines.join(' / ');
+  }
+
+  /**
+   * 学習履歴が端末のストレージ逼迫で消えないよう永続化を要求する。
+   * Chrome はホーム画面に追加済み（インストール済み）なら自動的に許可する。
+   */
+  async function requestPersistence() {
+    try {
+      if (!navigator.storage || !navigator.storage.persist) return;
+      if (await navigator.storage.persisted()) return;
+      await navigator.storage.persist();
+    } catch (e) { /* 失敗しても学習自体には影響しない */ }
   }
 
   function updateDataInfo() {
@@ -514,6 +545,7 @@
   async function main() {
     Voice.settings = S();
     applyTheme(S().theme || 'light');
+    requestPersistence();
     bindUI();
     questions = await Store.loadQuestions();
     bindSettings();

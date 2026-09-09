@@ -1,5 +1,5 @@
 /* sw.js — オフラインで使えるようにアプリ本体をキャッシュする */
-const VERSION = 'v2';
+const VERSION = 'v3';
 const CACHE = 'sharoushi-' + VERSION;
 const SHELL = [
   './',
@@ -8,8 +8,20 @@ const SHELL = [
   './js/store.js',
   './js/voice.js',
   './js/gemini.js',
+  './js/sync.js',
+  './js/firebase-config.js',
   './js/app.js',
-  './data/questions.json',
+  './data/index.json',
+  './data/labor-standards.json',
+  './data/safety.json',
+  './data/rousai.json',
+  './data/koyou.json',
+  './data/chousyu.json',
+  './data/roudou-ippan.json',
+  './data/shakai-ippan.json',
+  './data/kenpo.json',
+  './data/kounen.json',
+  './data/kokunen.json',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png'

@@ -3,7 +3,9 @@
   'use strict';
 
   var DB_NAME = 'sharoushi', DB_VER = 1, OS = 'questions';
-  var K_SET = 'sq.settings', K_PROG = 'sq.progress';
+  var K_SET = 'sq.settings', K_PROG = 'sq.progress', K_SEED = 'sq.seedVersion';
+  // 初期データを差し替えたら上げる。既存の端末でも次回起動時に入れ替わる
+  var SEED_VERSION = 2;
 
   var DEFAULT_SETTINGS = {
     theme: 'light',
@@ -138,17 +140,52 @@
     },
     resetProgress: function () { progress = {}; writeJSON(K_PROG, progress); },
 
-    /** 初回は data/questions.json を取り込む。以降は IndexedDB が唯一の情報源 */
+    /**
+     * 初期データは data/index.json に列挙した科目別ファイルから取り込む。
+     * 取り込み後は IndexedDB が唯一の情報源で、取り込んだ問題もここに同居する。
+     * SEED_VERSION が上がったときは、origin:'seed' のものだけ入れ替える
+     * （利用者が追加した問題と学習履歴はそのまま残す）。
+     */
     loadQuestions: function () {
+      var seeded = false;
+      try { seeded = parseInt(localStorage.getItem(K_SEED), 10) === SEED_VERSION; } catch (e) {}
+
       return tx('readonly', function (s) { return s.getAll(); }).then(function (all) {
-        if (all && all.length) return all;
-        return fetch('data/questions.json', { cache: 'no-cache' })
+        if (all && all.length && seeded) return all;
+
+        return fetch('data/index.json', { cache: 'no-cache' })
           .then(function (r) { return r.json(); })
-          .then(function (raw) {
-            var list = raw.map(function (q) { return normalize(q, 'seed'); }).filter(Boolean);
-            return Store.putQuestions(list).then(function () { return list; });
+          .then(function (idx) {
+            return Promise.all((idx.files || []).map(function (f) {
+              return fetch('data/' + f, { cache: 'no-cache' }).then(function (r) { return r.json(); });
+            }));
           })
-          .catch(function (e) { console.error('初期データの読み込みに失敗', e); return []; });
+          .then(function (chunks) {
+            var list = [];
+            chunks.forEach(function (raw) {
+              raw.forEach(function (q) {
+                var n = normalize(q, 'seed');
+                if (n) list.push(n);
+              });
+            });
+            if (!list.length) throw new Error('初期データが空です');
+            var keep = {};
+            list.forEach(function (q) { keep[q.id] = true; });
+            // 差し替えで消えた古い初期問題を残さない
+            var stale = (all || []).filter(function (q) { return q.origin === 'seed' && !keep[q.id]; });
+            return tx('readwrite', function (s) {
+              stale.forEach(function (q) { s.delete(q.id); });
+              list.forEach(function (q) { s.put(q); });
+            }).then(function () {
+              try { localStorage.setItem(K_SEED, String(SEED_VERSION)); } catch (e) {}
+              var users = (all || []).filter(function (q) { return q.origin !== 'seed'; });
+              return list.concat(users);
+            });
+          })
+          .catch(function (e) {
+            console.error('初期データの読み込みに失敗', e);
+            return all || [];
+          });
       });
     },
     putQuestions: function (list) {
@@ -168,6 +205,7 @@
       return Store.putQuestions(list).then(function () { return list.length; });
     },
     clearQuestions: function () {
+      try { localStorage.removeItem(K_SEED); } catch (e) {}
       return tx('readwrite', function (s) { s.clear(); });
     },
 

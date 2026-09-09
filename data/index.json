@@ -1,0 +1,15 @@
+{
+  "seedVersion": 2,
+  "files": [
+    "labor-standards.json",
+    "safety.json",
+    "rousai.json",
+    "koyou.json",
+    "chousyu.json",
+    "roudou-ippan.json",
+    "shakai-ippan.json",
+    "kenpo.json",
+    "kounen.json",
+    "kokunen.json"
+  ]
+}
