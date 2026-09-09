@@ -140,6 +140,20 @@
     },
     resetProgress: function () { progress = {}; writeJSON(K_PROG, progress); },
 
+    /** 初期データの差し替えで消えた問題の履歴を捨てる（統計が実際より多く出るのを防ぐ） */
+    pruneProgress: function (validIds) {
+      var keep = {}, removed = 0, id;
+      validIds.forEach(function (i) { keep[i] = true; });
+      for (id in progress) {
+        if (Object.prototype.hasOwnProperty.call(progress, id) && !keep[id]) {
+          delete progress[id];
+          removed++;
+        }
+      }
+      if (removed) writeJSON(K_PROG, progress);
+      return removed;
+    },
+
     /**
      * 初期データは data/index.json に列挙した科目別ファイルから取り込む。
      * 取り込み後は IndexedDB が唯一の情報源で、取り込んだ問題もここに同居する。

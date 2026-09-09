@@ -548,6 +548,7 @@
     requestPersistence();
     bindUI();
     questions = await Store.loadQuestions();
+    Store.pruneProgress(questions.map((q) => q.id));
     bindSettings();
     show('home');
 
