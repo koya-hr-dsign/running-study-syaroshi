@@ -39,6 +39,31 @@ python -m http.server 8765
 2. Android Chrome で開き、メニューから「ホーム画面に追加」
 3. 初回だけマイク許可を出す（🎤 ボタン）
 
+## アカウント同期（任意）
+
+⚙ →「アカウント同期」→ Google でログインすると、学習履歴と設定が Firestore の `users/{uid}` 配下に保存され、機種変更や別の端末でも引き継げます。
+
+設計は**ローカル優先**です。端末内の localStorage / IndexedDB を常に正として動かし、Firestore はその上に乗る同期層にすぎません。ログインしなくてもアプリは従来どおり動き、オフラインでも学習できます。
+
+- 学習履歴は問題ごとに最終解答時刻の新しいほうを採るので、複数端末で解いた分が合流します
+- 取り込んだ問題も同期します（初期データは配信側にあるので対象外）
+- **Gemini の API キーは同期しません**。秘密鍵をクラウドに置かないため、端末ごとに入力してください
+
+接続情報は `js/firebase-config.js` にあります。ここに並ぶ値は公開前提のもので、リポジトリに含めて問題ありません。データを守るのは次のセキュリティルールです。
+
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+  }
+}
+```
+
+別の Firebase プロジェクトを使う場合は、`js/firebase-config.js` を差し替え、Authentication で Google ログインを有効化し、配信するドメインを承認済みドメインに追加してください。
+
 ## AI 解説の設定
 
 1. [Google AI Studio](https://aistudio.google.com/apikey) で API キーを取得
@@ -91,6 +116,8 @@ css/style.css         スタイル（ダーク/ライト自動）
 js/store.js           設定・学習履歴(localStorage) / 問題(IndexedDB)
 js/voice.js           読み上げ + 音声コマンド解析
 js/gemini.js          Gemini API ラッパー
+js/firebase-config.js Firebase の接続情報
+js/sync.js            Googleログインと Firestore 同期
 js/app.js             画面制御・出題ロジック
 data/index.json       初期問題の索引
 data/*.json           科目別の問題（250問）

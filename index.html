@@ -153,6 +153,15 @@
   </div>
 
   <div class="card">
+    <h3>アカウント同期</h3>
+    <p class="note" id="syncState">確認中…</p>
+    <button id="syncBtn" class="big-btn primary">Google でログイン</button>
+    <button id="syncNow" class="big-btn" hidden>今すぐ同期</button>
+    <button id="syncOut" class="big-btn danger" hidden>ログアウト</button>
+    <p class="note">ログインすると学習履歴がクラウドに保存され、機種変更や別の端末でも引き継げます。ログインしなくても、これまでどおり端末内に保存されます。Gemini の API キーは同期しません。</p>
+  </div>
+
+  <div class="card">
     <h3>AI 解説（Gemini）</h3>
     <label class="row"><span>API キー</span>
       <input id="setGeminiKey" type="password" placeholder="AIza…" autocomplete="off"></label>
@@ -209,6 +218,8 @@ CSV: subject,type,text,choices,answer,explanation,source
 <script src="js/store.js"></script>
 <script src="js/voice.js"></script>
 <script src="js/gemini.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/sync.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

@@ -231,6 +231,7 @@
 
     const correct = (i === q.answer);
     Store.record(q.id, correct);
+    scheduleSync();
 
     [...$('choices').children].forEach((b, n) => {
       b.disabled = true;
@@ -372,20 +373,24 @@
   /* ============================================================
    * 設定画面
    * ============================================================ */
-  function bindSettings() {
+  /** 設定値を画面の各コントロールに反映する。同期で設定が入れ替わった後も呼ぶ */
+  function bindSettingsValues() {
     const s = S();
-    const set = (id, prop, val) => { $(id)[prop] = val; };
-
-    set('setTheme', 'value', s.theme || 'light');
-    set('setRate', 'value', s.rate);
-    set('setPitch', 'value', s.pitch);
-    set('setNextDelay', 'value', s.nextDelay);
+    $('setTheme').value = s.theme || 'light';
+    $('setRate').value = s.rate;
+    $('setPitch').value = s.pitch;
+    $('setNextDelay').value = s.nextDelay;
     $('rateVal').textContent = s.rate + '倍';
     $('nextDelayVal').textContent = s.nextDelay + '秒';
     ['autoRead', 'readChoices', 'autoExplain', 'autoNext', 'bargeIn', 'micAuto', 'aiSpeak']
       .forEach((k) => { $('set' + k[0].toUpperCase() + k.slice(1)).checked = !!s[k]; });
     $('setGeminiKey').value = s.geminiKey;
     $('setGeminiModel').value = s.geminiModel;
+  }
+
+  function bindSettings() {
+    const s = S();
+    bindSettingsValues();
 
     const fillVoices = () => {
       const sel = $('setVoice');
@@ -481,6 +486,83 @@
     } catch (e) { /* 失敗しても学習自体には影響しない */ }
   }
 
+  /* ============================================================
+   * アカウント同期
+   * ============================================================ */
+  let syncTimer = null;
+
+  function renderSync() {
+    const st = $('syncState');
+    if (!st) return;
+    if (!Sync.configured) {
+      st.textContent = '同期は設定されていません（この端末にのみ保存されます）';
+      $('syncBtn').hidden = true;
+      return;
+    }
+    const inTxt = Sync.signedIn
+      ? `${Sync.user.displayName || Sync.user.email} としてログイン中`
+      : 'ログインしていません（この端末にのみ保存されます）';
+    const when = Sync.lastSyncAt
+      ? `・最終同期 ${new Date(Sync.lastSyncAt).toLocaleString('ja-JP')}`
+      : '';
+    st.textContent = Sync.busy ? '同期中…' : inTxt + when + (Sync.lastError ? `\n⚠ ${Sync.lastError}` : '');
+    $('syncBtn').hidden = Sync.signedIn;
+    $('syncNow').hidden = !Sync.signedIn;
+    $('syncOut').hidden = !Sync.signedIn;
+  }
+
+  /** 解答のたびに書きに行くと無駄なので、少し待ってからまとめて送る */
+  function scheduleSync() {
+    if (!Sync.signedIn) return;
+    clearTimeout(syncTimer);
+    syncTimer = setTimeout(() => {
+      Sync.run('自動').then(renderHomeIfVisible).catch(() => {});
+    }, 4000);
+  }
+  function renderHomeIfVisible() {
+    renderSync();
+    if (view === 'home') renderHome();
+  }
+
+  function bindSync() {
+    Sync.onChange = renderSync;
+    Sync.onSettings = () => { applyTheme(S().theme || 'light'); bindSettingsValues(); };
+
+    $('syncBtn').addEventListener('click', async () => {
+      try {
+        toast('Google のログイン画面を開きます');
+        await Sync.signIn();
+      } catch (e) {
+        toast('ログインできませんでした: ' + Sync._explain(e), 5000);
+      }
+      renderSync();
+    });
+    $('syncNow').addEventListener('click', async () => {
+      try {
+        const r = await Sync.run('手動');
+        toast(r ? `同期しました（履歴 ${r.pulled} 件、問題 ${r.questions} 件を取り込み）` : '同期しました', 4000);
+        renderHomeIfVisible();
+      } catch (e) {
+        toast('同期に失敗: ' + Sync.lastError, 6000);
+      }
+    });
+    $('syncOut').addEventListener('click', async () => {
+      if (!confirm('ログアウトします。この端末の学習履歴はそのまま残ります。')) return;
+      await Sync.signOut();
+      toast('ログアウトしました');
+    });
+
+    // 画面を閉じる直前にも送っておく
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && Sync.signedIn) {
+        clearTimeout(syncTimer);
+        Sync.run('離脱時').catch(() => {});
+      }
+    });
+
+    Sync.init().then(renderSync);
+  }
+
   function updateDataInfo() {
     const user = questions.filter((q) => q.origin === 'user').length;
     $('dataInfo').textContent =
@@ -550,6 +632,7 @@
     questions = await Store.loadQuestions();
     Store.pruneProgress(questions.map((q) => q.id));
     bindSettings();
+    bindSync();
     show('home');
 
     if ('serviceWorker' in navigator) {

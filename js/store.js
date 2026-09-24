@@ -140,6 +140,45 @@
     },
     resetProgress: function () { progress = {}; writeJSON(K_PROG, progress); },
 
+    /** 同期用に履歴を配列で取り出す（Firestore のマップはキーに使えない文字があるため） */
+    progressArray: function () {
+      return Object.keys(progress).map(function (id) {
+        var s = progress[id];
+        return {
+          id: id, box: s.box, due: s.due, seen: s.seen,
+          right: s.right, wrong: s.wrong, last: s.last
+        };
+      });
+    },
+
+    /**
+     * 別の端末の履歴を取り込む。同じ問題は last（最終解答時刻）が新しいほうを採る。
+     * @returns 取り込んで変化した件数
+     */
+    mergeProgress: function (remote) {
+      var changed = 0;
+      (remote || []).forEach(function (r) {
+        if (!r || !r.id) return;
+        var mine = progress[r.id];
+        if (!mine || (r.last || 0) > (mine.last || 0)) {
+          progress[r.id] = {
+            box: r.box || 0, due: r.due || 0, seen: r.seen || 0,
+            right: r.right || 0, wrong: r.wrong || 0, last: r.last || 0
+          };
+          changed++;
+        }
+      });
+      if (changed) writeJSON(K_PROG, progress);
+      return changed;
+    },
+
+    /** 利用者が取り込んだ問題だけを返す（初期データは配信側にあるので同期しない） */
+    userQuestions: function () {
+      return tx('readonly', function (s) { return s.getAll(); }).then(function (all) {
+        return (all || []).filter(function (q) { return q.origin !== 'seed'; });
+      });
+    },
+
     /** 初期データの差し替えで消えた問題の履歴を捨てる（統計が実際より多く出るのを防ぐ） */
     pruneProgress: function (validIds) {
       var keep = {}, removed = 0, id;
