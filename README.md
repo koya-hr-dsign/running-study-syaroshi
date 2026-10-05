@@ -35,9 +35,21 @@ python -m http.server 8765
 
 ### スマホから使う
 
-1. GitHub Pages などの HTTPS で配信する
+1. Firebase Hosting などの HTTPS で配信する（下記「配信」）
 2. Android Chrome で開き、メニューから「ホーム画面に追加」
 3. 初回だけマイク許可を出す（🎤 ボタン）
+
+## 配信（Firebase Hosting）
+
+Firebase Hosting（プロジェクト `running-study-syaroshi`）で配信します。設定は `firebase.json` / `.firebaserc` にあります。
+
+```bash
+firebase login
+firebase hosting:channel:deploy preview   # 確認用の一時URLに出す
+firebase deploy --only hosting            # 本番（running-study-syaroshi.web.app）に出す
+```
+
+Firestore のセキュリティルールは `firestore.rules` にあります。反映は `firebase deploy --only firestore:rules`。
 
 ## アカウント同期（任意）
 
