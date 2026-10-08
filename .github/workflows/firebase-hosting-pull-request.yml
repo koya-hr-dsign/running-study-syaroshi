@@ -30,7 +30,8 @@ jobs:
         id: deploy
         run: |
           npx --yes firebase-tools@15 hosting:channel:deploy "pr-${{ github.event.number }}" \
-            --expires 7d --project running-study-syaroshi --non-interactive --json > deploy.json
+            --expires 7d --project running-study-syaroshi --non-interactive --json > deploy.json \
+            || { cat deploy.json; exit 1; }
           url=$(jq -r '.result[].url' deploy.json | head -n1)
           echo "url=$url" >> "$GITHUB_OUTPUT"
           echo "プレビュー: $url" >> "$GITHUB_STEP_SUMMARY"
