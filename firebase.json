@@ -6,6 +6,7 @@
       "firestore.rules",
       ".firebaserc",
       "README.md",
+      "gha-creds-*.json",
       "**/.*",
       "**/.*/**",
       "**/node_modules/**"

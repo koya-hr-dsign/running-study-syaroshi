@@ -49,6 +49,13 @@ firebase hosting:channel:deploy preview   # 確認用の一時URLに出す
 firebase deploy --only hosting            # 本番（running-study-syaroshi.web.app）に出す
 ```
 
+通常は GitHub Actions が自動で配信します（`.github/workflows/`）。
+
+- PR を作ると確認用の一時 URL（7日間有効）が作られ、PR にコメントされる
+- main にマージすると本番へ公開される
+
+認証は鍵ファイルを使わない Workload Identity 連携です。GitHub のリポジトリ変数 `GCP_WIF_PROVIDER` / `GCP_SERVICE_ACCOUNT` に接続先を登録してあります（秘密情報ではありません）。
+
 Firestore のセキュリティルールは `firestore.rules` にあります。反映は `firebase deploy --only firestore:rules`。
 
 ## アカウント同期（任意）
