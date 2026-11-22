@@ -42,9 +42,10 @@
       });
       contents.push({ role: 'user', parts: [{ text: message }] });
 
-      return fetch(ENDPOINT + encodeURIComponent(model) + ':generateContent?key=' + encodeURIComponent(key), {
+      // キーは URL に載せずヘッダで送る（URL は履歴やログに残りやすいため）
+      return fetch(ENDPOINT + encodeURIComponent(model) + ':generateContent', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key },
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: systemPrompt(q) }] },
           contents: contents,

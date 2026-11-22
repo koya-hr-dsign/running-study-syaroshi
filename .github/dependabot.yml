@@ -1,0 +1,7 @@
+# 自動公開で使っている GitHub Actions の部品を最新に保つ
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
