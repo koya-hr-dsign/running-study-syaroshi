@@ -1,10 +1,11 @@
 /* sw.js — オフラインで使えるようにアプリ本体をキャッシュする */
-const VERSION = 'v3';
+const VERSION = 'v4';
 const CACHE = 'sharoushi-' + VERSION;
 const SHELL = [
   './',
   './index.html',
   './css/style.css',
+  './js/theme.js',
   './js/store.js',
   './js/voice.js',
   './js/gemini.js',
